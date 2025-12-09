@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Table, Form, Button, Row, Col } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import { FaTimes } from 'react-icons/fa';
-
 import { toast } from 'react-toastify';
+import axios from 'axios';
+
 import Message from '../components/Message';
 import Loader from '../components/Loader';
 import { useProfileMutation } from '../slices/usersApiSlice';
@@ -16,20 +17,24 @@ const ProfileScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [profilePicture, setProfilePicture] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   const { userInfo } = useSelector((state) => state.auth);
 
   const { data: orders, isLoading, error } = useGetMyOrdersQuery();
 
-  const [updateProfile, { isLoading: loadingUpdateProfile }] =
-    useProfileMutation();
+  const [updateProfile, { isLoading: loadingUpdateProfile }] = useProfileMutation();
+
+  const dispatch = useDispatch();
+
 
   useEffect(() => {
     setName(userInfo.name);
     setEmail(userInfo.email);
-  }, [userInfo.email, userInfo.name]);
+    setProfilePicture(userInfo.profilePicture || '/images/default-avatar.png');
+  }, [userInfo]);
 
-  const dispatch = useDispatch();
   const submitHandler = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
@@ -43,6 +48,7 @@ const ProfileScreen = () => {
           name,
           email,
           password,
+          profilePicture,
         }).unwrap();
         dispatch(setCredentials({ ...res }));
         toast.success('Profile updated successfully');
@@ -52,12 +58,48 @@ const ProfileScreen = () => {
     }
   };
 
+  const uploadFileHandler = async (e) => {
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append('image', file);
+    setUploading(true);
+
+    try {
+      const { data } = await axios.post('/api/upload/profile', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      setProfilePicture(data.filePath);
+      setUploading(false);
+    } catch (err) {
+      console.error(err);
+      setUploading(false);
+    }
+  };
+
   return (
     <Row>
       <Col md={3}>
         <h2>User Profile</h2>
 
         <Form onSubmit={submitHandler}>
+          <Form.Group className='my-2' controlId='profilePicture'>
+            <Form.Label>Profile Picture</Form.Label>
+            <Form.Control
+              type='file'
+              onChange={uploadFileHandler}
+            />
+            {uploading && <Loader />}
+            {profilePicture && (
+              <img
+                src={profilePicture}
+                alt='Profile'
+                style={{ width: '100px', marginTop: '10px' }}
+              />
+            )}
+          </Form.Group>
+
           <Form.Group className='my-2' controlId='name'>
             <Form.Label>Name</Form.Label>
             <Form.Control
@@ -104,14 +146,13 @@ const ProfileScreen = () => {
           {loadingUpdateProfile && <Loader />}
         </Form>
       </Col>
+
       <Col md={9}>
         <h2>My Orders</h2>
         {isLoading ? (
           <Loader />
         ) : error ? (
-          <Message variant='danger'>
-            {error?.data?.message || error.error}
-          </Message>
+          <Message variant='danger'>{error?.data?.message || error.error}</Message>
         ) : (
           <Table striped hover responsive className='table-sm'>
             <thead>
@@ -131,26 +172,13 @@ const ProfileScreen = () => {
                   <td>{order.createdAt.substring(0, 10)}</td>
                   <td>{order.totalPrice}</td>
                   <td>
-                    {order.isPaid ? (
-                      order.paidAt.substring(0, 10)
-                    ) : (
-                      <FaTimes style={{ color: 'red' }} />
-                    )}
+                    {order.isPaid ? order.paidAt.substring(0, 10) : <FaTimes style={{ color: 'red' }} />}
                   </td>
                   <td>
-                    {order.isDelivered ? (
-                      order.deliveredAt.substring(0, 10)
-                    ) : (
-                      <FaTimes style={{ color: 'red' }} />
-                    )}
+                    {order.isDelivered ? order.deliveredAt.substring(0, 10) : <FaTimes style={{ color: 'red' }} />}
                   </td>
                   <td>
-                    <Button
-                      as={Link}
-                      to={`/order/${order._id}`}
-                      className='btn-sm'
-                      variant='light'
-                    >
+                    <Button as={Link} to={`/order/${order._id}`} className='btn-sm' variant='light'>
                       Details
                     </Button>
                   </td>

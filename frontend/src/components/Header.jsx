@@ -1,12 +1,10 @@
-import { Navbar, Nav, Container, NavDropdown, Badge } from 'react-bootstrap';
-import { FaShoppingCart, FaUser, FaCog } from 'react-icons/fa';
-import { useState } from 'react';
+import { Navbar, Nav, Container, NavDropdown, Badge, Image } from 'react-bootstrap';
+import { FaShoppingCart, FaUser } from 'react-icons/fa';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { useLogoutMutation } from '../slices/usersApiSlice';
 import { logout } from '../slices/authSlice';
 import SearchBox from './SearchBox';
-import SettingsModal from './SettingsModal';
 import logo from '../assets/logo.png';
 import { resetCart } from '../slices/cartSlice';
 
@@ -32,11 +30,6 @@ const Header = () => {
     }
   };
 
-  const [showSettings, setShowSettings] = useState(false);
-
-  const closeSettings = () => setShowSettings(false);
-  const openSettings = () => setShowSettings(true);
-
   return (
     <header>
       <Navbar bg='primary' variant='dark' expand='lg' collapseOnSelect>
@@ -58,26 +51,34 @@ const Header = () => {
                 )}
               </Nav.Link>
               {userInfo ? (
-                <>
-                  <NavDropdown title={userInfo.name} id='username'>
-                    <NavDropdown.Item onClick={openSettings}>
-                      <FaCog /> Settings
-                    </NavDropdown.Item>
-                    <NavDropdown.Item as={Link} to='/profile'>
-                      Profile
-                    </NavDropdown.Item>
-                    <NavDropdown.Item onClick={logoutHandler}>
-                      Logout
-                    </NavDropdown.Item>
-                  </NavDropdown>
-                </>
+                <NavDropdown
+                  title={
+                    <>
+                      {userInfo.profilePicture && (
+                        <Image
+                          src={userInfo.profilePicture}
+                          roundedCircle
+                          width='25'
+                          height='25'
+                          className='me-2'
+                        />
+                      )}
+                      {userInfo.name}
+                    </>
+                  }
+                  id='username'
+                >
+                  <NavDropdown.Item as={Link} to='/profile'>
+                    Profile
+                  </NavDropdown.Item>
+                  <NavDropdown.Item onClick={logoutHandler}>Logout</NavDropdown.Item>
+                </NavDropdown>
               ) : (
                 <Nav.Link as={Link} to='/login'>
                   <FaUser /> Sign In
                 </Nav.Link>
               )}
 
-              {/* Admin Links */}
               {userInfo && userInfo.isAdmin && (
                 <NavDropdown title='Admin' id='adminmenu'>
                   <NavDropdown.Item as={Link} to='/admin/productlist'>
@@ -95,7 +96,6 @@ const Header = () => {
           </Navbar.Collapse>
         </Container>
       </Navbar>
-      <SettingsModal show={showSettings} onHide={closeSettings} />
     </header>
   );
 };

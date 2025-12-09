@@ -1,14 +1,16 @@
-import path from 'path';
 import express from 'express';
 import multer from 'multer';
+import path from 'path';
 import { protect } from '../middleware/authMiddleware.js';
 import fs from 'fs';
 
 const router = express.Router();
 
+// Set storage engine
 const storage = multer.diskStorage({
   destination(req, file, cb) {
     const uploadPath = 'uploads/profile';
+    // Create folder if it doesn't exist
     fs.mkdirSync(uploadPath, { recursive: true });
     cb(null, uploadPath);
   },
@@ -20,29 +22,15 @@ const storage = multer.diskStorage({
   },
 });
 
+// Check file type
 function checkFileType(file, cb) {
   const filetypes = /jpg|jpeg|png/;
   const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
   const mimetype = filetypes.test(file.mimetype);
-
   if (extname && mimetype) {
     return cb(null, true);
   } else {
     cb('Images only!');
-  }
-}
-
-function fileFilter(req, file, cb) {
-  const filetypes = /jpe?g|png|webp/;
-  const mimetypes = /image\/jpe?g|image\/png|image\/webp/;
-
-  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = mimetypes.test(file.mimetype);
-
-  if (extname && mimetype) {
-    cb(null, true);
-  } else {
-    cb(new Error('Images only!'), false);
   }
 }
 
@@ -53,22 +41,6 @@ const upload = multer({
   },
 });
 
-const uploadSingleImage = upload.single('image');
-
-router.post('/', (req, res) => {
-  uploadSingleImage(req, res, function (err) {
-    if (err) {
-      return res.status(400).send({ message: err.message });
-    }
-
-    res.status(200).send({
-      message: 'Image uploaded successfully',
-      image: `/${req.file.path}`,
-    });
-  });
-});
-
-// Upload profile picture
 router.post('/profile', protect, upload.single('image'), (req, res) => {
   res.send({ filePath: `/${req.file.path}` });
 });
