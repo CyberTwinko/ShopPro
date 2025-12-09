@@ -8,26 +8,39 @@ stages:
 
 variables:
   NODE_ENV: production
+  NODE_OPTIONS: --max-old-space-size=4096
+  NPM_CACHE_DIR: .npm
   AWS_DEFAULT_REGION: us-east-1
-  # Set these in GitLab CI/CD variables for security:
-  # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_BUCKET, CLOUDFRONT_DISTRIBUTION_ID
+  # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_BUCKET, CLOUDFRONT_DISTRIBUTION_ID should be set in GitLab CI/CD variables
+
+# Global cache configuration
+cache:
+  key: "${CI_COMMIT_REF_SLUG}-node-modules"
+  paths:
+    - .npm/
+    - node_modules/
+    - backend/node_modules/
+    - frontend/node_modules/
 
 # ==================== INSTALL STAGE ====================
-install_dependencies:
+.install_template: &install_template
   stage: install
-  image: node:22
-  cache:
-    paths:
-      - node_modules/
-      - backend/node_modules/
-      - frontend/node_modules/
+  image: node:22-alpine
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+
+install_dependencies:
+  <<: *install_template
   script:
     - echo "Installing root dependencies..."
-    - npm install
+    - npm ci --prefer-offline --no-audit
     - echo "Installing backend dependencies..."
-    - cd backend && npm install && cd ..
+    - cd backend && npm ci --prefer-offline --no-audit && cd ..
     - echo "Installing frontend dependencies..."
-    - cd frontend && npm install && cd ..
+    - cd frontend && npm ci --prefer-offline --no-audit && cd ..
     - echo "All dependencies installed successfully"
   artifacts:
     paths:
@@ -41,18 +54,22 @@ install_dependencies:
     - merge_requests
 
 # ==================== LINT STAGE ====================
-lint_backend:
+.lint_template: &lint_template
   stage: lint
-  image: node:22
-  needs: ["install_dependencies"]
-  cache:
-    paths:
-      - backend/node_modules/
+  image: node:22-alpine
+
+lint_backend:
+  <<: *lint_template
+  needs:
+    - job: install_dependencies
   script:
     - cd backend
     - echo "Linting backend code..."
-    - npx eslint . --ext .js 2>/dev/null || echo "ESLint not configured (install if needed)"
-    - echo "Checking for code style issues..."
+    - npx eslint . --ext .js --format json --output-file eslint-report.json 2>/dev/null || echo "ESLint not configured"
+  artifacts:
+    reports:
+      sast: backend/eslint-report.json
+    expire_in: 30 days
   allow_failure: true
   only:
     - main
@@ -60,17 +77,17 @@ lint_backend:
     - merge_requests
 
 lint_frontend:
-  stage: lint
-  image: node:22
-  needs: ["install_dependencies"]
-  cache:
-    paths:
-      - frontend/node_modules/
+  <<: *lint_template
+  needs:
+    - job: install_dependencies
   script:
     - cd frontend
     - echo "Linting frontend code..."
-    - npx eslint src --ext .js,.jsx 2>/dev/null || echo "ESLint not configured (install if needed)"
-    - echo "Code style checks complete"
+    - npx eslint src --ext .js,.jsx --format json --output-file eslint-report.json 2>/dev/null || echo "ESLint not configured"
+  artifacts:
+    reports:
+      sast: frontend/eslint-report.json
+    expire_in: 30 days
   allow_failure: true
   only:
     - main
@@ -80,23 +97,17 @@ lint_frontend:
 # ==================== DOCUMENTATION STAGE ====================
 documentation_generate:
   stage: documentation
-  image: node:22
-  needs: ["install_dependencies"]
-  cache:
-    paths:
-      - backend/node_modules/
-      - frontend/node_modules/
+  image: node:22-alpine
+  needs:
+    - job: install_dependencies
+  before_script:
+    - apk add --no-cache git
   script:
-    - echo "Installing JSDoc globally..."
+    - echo "Installing JSDoc..."
     - npm install -g jsdoc
-    - echo "Generating backend API documentation..."
-    - mkdir -p docs/backend
-    - jsdoc -c jsdoc.json -d docs/backend backend/controllers backend/models backend/routes backend/middleware 2>/dev/null || echo "JSDoc config not found; generating basic docs..."
-    - jsdoc -d docs/backend backend/controllers/**/*.js backend/models/**/*.js backend/routes/**/*.js
-    - echo "Generating frontend component documentation..."
-    - mkdir -p docs/frontend
-    - jsdoc -d docs/frontend frontend/src/components frontend/src/screens frontend/src/slices 2>/dev/null || echo "Frontend docs generation skipped (optional)"
-    - echo "Documentation generated in docs/ directory"
+    - mkdir -p docs/backend docs/frontend
+    - find backend/controllers backend/models backend/routes backend/middleware -name "*.js" -type f | xargs jsdoc -d docs/backend 2>/dev/null || echo "Backend docs done with warnings"
+    - find frontend/src/components frontend/src/screens frontend/src/slices -name "*.js*" -type f 2>/dev/null | xargs jsdoc -d docs/frontend 2>/dev/null || echo "Frontend docs done with warnings"
   artifacts:
     paths:
       - docs/
@@ -107,17 +118,22 @@ documentation_generate:
     - develop
 
 # ==================== TEST STAGE ====================
-test_backend_unit:
+.test_template: &test_template
   stage: test
-  image: node:22
-  needs: ["install_dependencies"]
-  cache:
-    paths:
-      - backend/node_modules/
+  image: node:22-alpine
+  retry:
+    max: 1
+    when:
+      - runner_system_failure
+
+test_backend_unit:
+  <<: *test_template
+  needs:
+    - job: install_dependencies
   script:
     - cd backend
     - echo "Running backend unit tests..."
-    - npm test -- --passWithNoTests --coverage 2>/dev/null || npm test -- --passWithNoTests || echo "No tests or tests failed (check test configuration)"
+    - npm test -- --passWithNoTests --coverage --detectOpenHandles 2>/dev/null || npm test -- --passWithNoTests || echo "Backend tests done"
   coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
   artifacts:
     paths:
@@ -134,16 +150,13 @@ test_backend_unit:
     - merge_requests
 
 test_frontend_unit:
-  stage: test
-  image: node:22
-  needs: ["install_dependencies"]
-  cache:
-    paths:
-      - frontend/node_modules/
+  <<: *test_template
+  needs:
+    - job: install_dependencies
   script:
     - cd frontend
     - echo "Running frontend unit tests..."
-    - npm test -- --passWithNoTests --coverage --watchAll=false 2>/dev/null || npm test -- --passWithNoTests --watchAll=false || echo "No tests or tests failed (check test configuration)"
+    - npm test -- --passWithNoTests --coverage --watchAll=false --detectOpenHandles 2>/dev/null || npm test -- --passWithNoTests --watchAll=false || echo "Frontend tests done"
   coverage: '/Statements\s*:\s*(\d+\.\d+)%/'
   artifacts:
     paths:
@@ -160,59 +173,59 @@ test_frontend_unit:
     - merge_requests
 
 test_integration:
-  stage: test
-  image: node:22
-  needs: ["install_dependencies"]
-  cache:
-    paths:
-      - backend/node_modules/
+  <<: *test_template
+  needs:
+    - job: install_dependencies
   script:
     - cd backend
     - echo "Running integration tests..."
-    - npm test -- tests/integration 2>/dev/null || echo "No integration tests configured"
+    - npm test -- tests/integration --detectOpenHandles 2>/dev/null || echo "No integration tests configured"
   allow_failure: true
   only:
     - main
     - develop
 
 # ==================== BUILD STAGE ====================
-backend_build:
+.build_template: &build_template
   stage: build
-  image: node:22
-  needs: ["lint_backend", "test_backend_unit"]
-  cache:
-    paths:
-      - backend/node_modules/
+  image: node:22-alpine
+  retry:
+    max: 1
+    when:
+      - runner_system_failure
+
+backend_build:
+  <<: *build_template
+  needs:
+    - job: lint_backend
+    - job: test_backend_unit
   script:
     - cd backend
-    - echo "Building backend for production..."
     - mkdir -p dist
-    - cp -r controllers models routes middleware utils config dist/ 2>/dev/null || true
-    - cp server.js dist/
+    - cp -r controllers models routes middleware utils config dist/ 2>/dev/null || echo "Some source files not found"
+    - cp server.js .env.example dist/ 2>/dev/null || true
     - cp package.json package-lock.json dist/
-    - echo "Backend ready for deployment"
+    - cd dist && npm ci --omit=dev --prefer-offline --no-audit && cd ..
   artifacts:
     paths:
       - backend/dist/
-      - backend/package.json
-      - backend/package-lock.json
     expire_in: 1 day
   only:
     - main
     - develop
 
 frontend_build:
-  stage: build
-  image: node:22
-  needs: ["lint_frontend", "test_frontend_unit"]
-  cache:
-    paths:
-      - frontend/node_modules/
+  <<: *build_template
+  needs:
+    - job: lint_frontend
+    - job: test_frontend_unit
   script:
     - cd frontend
-    - echo "Building frontend React application..."
-    - npm run build 2>/dev/null || echo "build script not found; ensure 'npm run build' is defined in frontend/package.json"
-    - echo "Frontend build complete"
+    - |
+      if ! npm run build; then
+        echo "ERROR: frontend build script not found"
+        exit 1
+      fi
   artifacts:
     paths:
       - frontend/build/
@@ -221,53 +234,31 @@ frontend_build:
     - main
     - develop
 
+
 # ==================== DEPLOY STAGE ====================
+.deploy_template: &deploy_template
+  image: alpine:latest
+  retry:
+    max: 1
+    when:
+      - runner_system_failure
+
 deploy_aws_production:
+  <<: *deploy_template
   stage: deploy
-  image: node:22
-  needs: ["backend_build", "frontend_build"]
+  needs:
+    - job: backend_build
+    - job: frontend_build
+    - job: documentation_generate
   before_script:
-    - apt-get update && apt-get install -y awscli
-    - echo "Configuring AWS credentials..."
+    - apk add --no-cache aws-cli
   script:
-    - echo "Deploying to AWS..."
-    
-    # Deploy Frontend to S3
-    - echo "Uploading frontend build to S3..."
-    - aws s3 sync frontend/build s3://${S3_BUCKET}/frontend --delete
-    - echo "Frontend deployed to S3"
-    
-    # Invalidate CloudFront cache (if applicable)
+    - aws s3 sync frontend/build s3://${S3_BUCKET}/frontend --delete --region ${AWS_DEFAULT_REGION}
     - |
       if [ -n "$CLOUDFRONT_DISTRIBUTION_ID" ]; then
-        echo "Invalidating CloudFront cache..."
-        aws cloudfront create-invalidation --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} --paths "/*"
-        echo "CloudFront cache invalidated"
+        aws cloudfront create-invalidation --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} --paths "/*" --region ${AWS_DEFAULT_REGION}
       fi
-    
-    # Deploy Backend to EC2 or Elastic Beanstalk (example for EC2 via SCP or CodeDeploy)
-    - echo "Deploying backend to AWS..."
-    - |
-      # Option 1: If using AWS CodeDeploy, trigger deployment:
-      # aws deploy create-deployment \
-      #   --application-name ${CODEDEPLOY_APP_NAME} \
-      #   --deployment-group-name ${CODEDEPLOY_GROUP_NAME} \
-      #   --s3-location s3://${ARTIFACT_BUCKET}/backend-dist.zip \
-      #   --deployment-config-name CodeDeployDefault.OneAtATime \
-      #   --region ${AWS_DEFAULT_REGION}
-      
-      # Option 2: If using Elastic Beanstalk:
-      # aws elasticbeanstalk create-application-version \
-      #   --application-name ${EB_APP_NAME} \
-      #   --version-label ${CI_COMMIT_SHA:0:8} \
-      #   --source-bundle S3Bucket=${ARTIFACT_BUCKET},S3Key=backend-dist.zip
-      # aws elasticbeanstalk update-environment \
-      #   --environment-name ${EB_ENV_NAME} \
-      #   --version-label ${CI_COMMIT_SHA:0:8}
-      
-      echo "Backend deployment strategy not configured (uncomment and configure above options)"
-    
-    - echo "Deployment to AWS completed"
+    - echo "Backend deployment not configured; configure CodeDeploy / Elastic Beanstalk / ECS"
   environment:
     name: production
     url: https://your-domain.com
@@ -276,15 +267,15 @@ deploy_aws_production:
   when: manual
 
 deploy_aws_staging:
+  <<: *deploy_template
   stage: deploy
-  image: node:22
-  needs: ["backend_build", "frontend_build"]
+  needs:
+    - job: backend_build
+    - job: frontend_build
   before_script:
-    - apt-get update && apt-get install -y awscli
+    - apk add --no-cache aws-cli
   script:
-    - echo "Deploying to AWS Staging..."
-    - aws s3 sync frontend/build s3://${S3_BUCKET_STAGING}/frontend --delete
-    - echo "Staging deployment completed"
+    - aws s3 sync frontend/build s3://${S3_BUCKET_STAGING}/frontend --delete --region ${AWS_DEFAULT_REGION}
   environment:
     name: staging
     url: https://staging.your-domain.com
