@@ -4,6 +4,7 @@ import { Container } from 'react-bootstrap';
 import { Outlet } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import ThemeHandler from './components/ThemeHandler';
 import { logout } from './slices/authSlice';
 
 import { ToastContainer } from 'react-toastify';
@@ -26,6 +27,7 @@ const App = () => {
   return (
     <>
       <ToastContainer />
+      <ThemeHandler />
       <Header />
       <main className='py-3'>
         <Container>

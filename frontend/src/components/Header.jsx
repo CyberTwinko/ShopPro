@@ -1,10 +1,12 @@
 import { Navbar, Nav, Container, NavDropdown, Badge } from 'react-bootstrap';
-import { FaShoppingCart, FaUser } from 'react-icons/fa';
+import { FaShoppingCart, FaUser, FaCog } from 'react-icons/fa';
+import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { useLogoutMutation } from '../slices/usersApiSlice';
 import { logout } from '../slices/authSlice';
 import SearchBox from './SearchBox';
+import SettingsModal from './SettingsModal';
 import logo from '../assets/logo.png';
 import { resetCart } from '../slices/cartSlice';
 
@@ -30,6 +32,11 @@ const Header = () => {
     }
   };
 
+  const [showSettings, setShowSettings] = useState(false);
+
+  const closeSettings = () => setShowSettings(false);
+  const openSettings = () => setShowSettings(true);
+
   return (
     <header>
       <Navbar bg='primary' variant='dark' expand='lg' collapseOnSelect>
@@ -53,6 +60,9 @@ const Header = () => {
               {userInfo ? (
                 <>
                   <NavDropdown title={userInfo.name} id='username'>
+                    <NavDropdown.Item onClick={openSettings}>
+                      <FaCog /> Settings
+                    </NavDropdown.Item>
                     <NavDropdown.Item as={Link} to='/profile'>
                       Profile
                     </NavDropdown.Item>
@@ -85,6 +95,7 @@ const Header = () => {
           </Navbar.Collapse>
         </Container>
       </Navbar>
+      <SettingsModal show={showSettings} onHide={closeSettings} />
     </header>
   );
 };

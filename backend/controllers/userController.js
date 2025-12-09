@@ -17,6 +17,7 @@ const authUser = asyncHandler(async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+        theme: user.theme,
       isAdmin: user.isAdmin,
     });
   } else {
@@ -51,6 +52,7 @@ const registerUser = asyncHandler(async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      theme: user.theme,
       isAdmin: user.isAdmin,
     });
   } else {
@@ -78,6 +80,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      theme: user.theme,
       isAdmin: user.isAdmin,
     });
   } else {
@@ -93,21 +96,35 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
 
   if (user) {
+    // Log incoming data for debugging (do not log sensitive data in production)
+    console.log('updateUserProfile: incoming body ->', {
+      ...req.body,
+      password: req.body.password ? '[REDACTED]' : undefined,
+    });
+
     user.name = req.body.name || user.name;
     user.email = req.body.email || user.email;
+    user.theme = req.body.theme || user.theme;
 
     if (req.body.password) {
       user.password = req.body.password;
     }
 
-    const updatedUser = await user.save();
+    try {
+      const updatedUser = await user.save();
 
-    res.json({
-      _id: updatedUser._id,
-      name: updatedUser.name,
-      email: updatedUser.email,
-      isAdmin: updatedUser.isAdmin,
-    });
+      res.json({
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        theme: updatedUser.theme,
+        isAdmin: updatedUser.isAdmin,
+      });
+    } catch (saveError) {
+      console.error('updateUserProfile: save error ->', saveError);
+      // Re-throw to be handled by the global error handler
+      throw saveError;
+    }
   } else {
     res.status(404);
     throw new Error('User not found');

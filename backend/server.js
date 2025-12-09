@@ -2,7 +2,10 @@ import path from 'path';
 import express from 'express';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
-dotenv.config();
+import cors from 'cors';
+// Load environment from repository root when running npm from the `backend` folder.
+// This ensures `MONGO_URI` (in `../.env`) is available to mongoose.connect().
+dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
 import connectDB from './config/db.js';
 import productRoutes from './routes/productRoutes.js';
 import userRoutes from './routes/userRoutes.js';
@@ -19,6 +22,13 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+// Enable CORS for local frontend dev server
+app.use(
+  cors({
+    origin: 'http://localhost:3000',
+    credentials: true,
+  })
+);
 
 app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);

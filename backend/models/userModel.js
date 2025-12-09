@@ -16,6 +16,11 @@ const userSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    theme: {
+      type: String,
+      required: false,
+      default: 'light',
+    },
     isAdmin: {
       type: Boolean,
       required: true,
@@ -33,9 +38,10 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 };
 
 // Encrypt password using bcrypt
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
+  // If password is not modified, exit early. For async hooks, don't use `next`.
   if (!this.isModified('password')) {
-    next();
+    return;
   }
 
   const salt = await bcrypt.genSalt(10);
