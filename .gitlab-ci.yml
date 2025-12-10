@@ -163,7 +163,7 @@ build_app:
     - mkdir -p backend/deploy
     
     # Copy backend files (without node_modules)
-    - cp -r backend/controllers backend/models backend/routes backend/middleware backend/utils backend/config backend/server.js backend/.env.example backend/package*.json backend/deploy/
+    - cp -r backend/controllers backend/models backend/routes backend/middleware backend/utils backend/config backend/server.js backend/package*.json backend/deploy/
     
     # Copy frontend build into backend deploy folder
     - cp -r frontend/build backend/deploy/public
