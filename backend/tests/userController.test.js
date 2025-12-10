@@ -60,3 +60,51 @@ test('updateUserProfile updates theme and returns updated user', async () => {
     expect.objectContaining({ theme: 'dark' })
   );
 });
+
+test('updateUserProfile returns 404 when user not found', async () => {
+  // Simulate no user found
+  User.findById.mockResolvedValue(null);
+
+  const req = {
+    user: { _id: mockUser._id },
+    body: { theme: 'dark' },
+  };
+
+  const json = jest.fn();
+  const status = jest.fn().mockReturnValue({ json });
+  const res = { json, status };
+
+  await expect(updateUserProfile(req, res)).rejects.toThrow('User not found');
+
+  expect(User.findById).toHaveBeenCalledWith(mockUser._id);
+  expect(status).toHaveBeenCalledWith(404);
+});
+
+test('updateUserProfile preserves theme when none provided', async () => {
+  // Ensure save returns the original theme (mockUser.theme === 'light')
+  mockSave.mockResolvedValue({
+    _id: mockUser._id,
+    name: mockUser.name,
+    email: mockUser.email,
+    isAdmin: mockUser.isAdmin,
+    theme: mockUser.theme,
+  });
+  User.findById.mockResolvedValue({ ...mockUser, save: mockSave });
+
+  const req = {
+    user: { _id: mockUser._id },
+    body: {}, // no theme provided
+  };
+
+  const json = jest.fn();
+  const status = jest.fn().mockReturnValue({ json });
+  const res = { json, status };
+
+  await updateUserProfile(req, res);
+
+  expect(User.findById).toHaveBeenCalledWith(mockUser._id);
+  expect(mockSave).toHaveBeenCalled();
+  expect(res.json).toHaveBeenCalledWith(
+    expect.objectContaining({ theme: mockUser.theme })
+  );
+});
