@@ -232,7 +232,8 @@ backend_build:
     - if [ -d "../docs" ]; then cp -r ../docs dist/docs; else echo "No docs found"; fi
     # Install production dependencies inside dist
     - cd dist && npm ci --omit=dev --prefer-offline --no-audit && cd ..
-    # Create a deployable zip for Elastic Beanstalk
+    # Ensure zip is available on alpine image, then create deployable zip for Elastic Beanstalk
+    - apk add --no-cache zip || true
     - zip -r backend-app.zip dist/*
   artifacts:
     paths:
