@@ -282,4 +282,4 @@ deploy_aws_staging:
   only:
     - develop
   when: manual
-##hi
+##bye
