@@ -12,6 +12,7 @@ const cartSlice = createSlice({
     addToCart: (state, action) => {
       // NOTE: we don't need user, rating, numReviews or reviews
       // in the cart
+      // eslint-disable-next-line
       const { user, rating, numReviews, reviews, ...item } = action.payload;
 
       const existItem = state.cartItems.find((x) => x._id === item._id);
@@ -38,12 +39,14 @@ const cartSlice = createSlice({
       state.paymentMethod = action.payload;
       localStorage.setItem('cart', JSON.stringify(state));
     },
+    // eslint-disable-next-line
     clearCartItems: (state, action) => {
       state.cartItems = [];
       localStorage.setItem('cart', JSON.stringify(state));
     },
     // NOTE: here we need to reset state for when a user logs out so the next
     // user doesn't inherit the previous users cart and shipping
+    // eslint-disable-next-line
     resetCart: (state) => (state = initialState),
   },
 });

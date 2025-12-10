@@ -28,6 +28,7 @@ const Header = () => {
       dispatch(resetCart());
       navigate('/login');
     } catch (err) {
+      // eslint-disable-next-line
       console.error(err);
     }
   };

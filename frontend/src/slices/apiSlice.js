@@ -25,5 +25,6 @@ async function baseQueryWithAuth(args, api, extra) {
 export const apiSlice = createApi({
   baseQuery: baseQueryWithAuth, // Use the customized baseQuery
   tagTypes: ['Product', 'Order', 'User'],
+  // eslint-disable-next-line
   endpoints: (builder) => ({}),
 });

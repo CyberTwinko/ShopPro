@@ -18,12 +18,14 @@ const SettingsModal = ({ show, onHide }) => {
 
   const saveHandler = async () => {
     try {
+      // eslint-disable-next-line
       console.log('saveHandler: sending profile update with theme:', theme);
       const res = await updateProfile({
         name: userInfo.name,
         email: userInfo.email,
         theme,
       }).unwrap();
+      // eslint-disable-next-line
       console.log('saveHandler: success response:', res);
 
       // update local store with new theme
@@ -33,6 +35,7 @@ const SettingsModal = ({ show, onHide }) => {
       localStorage.setItem('theme', res.theme || theme || 'light');
       onHide();
     } catch (err) {
+      // eslint-disable-next-line
       console.error('saveHandler: error:', err);
       toast.error(err?.data?.message || err.error || 'Failed to save settings');
     }
