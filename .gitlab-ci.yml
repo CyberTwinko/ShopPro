@@ -292,27 +292,27 @@ deploy_aws_production:
     - main
   when: manual
 
-# deploy_aws_staging:
-#   <<: *deploy_template
-#   stage: deploy
-#   needs:
-#     - job: backend_build
-#     - job: frontend_build
-#   before_script:
-#     - apk add --no-cache aws-cli zip
-#   script:
-#     - echo "🚀 Deploying to AWS Elastic Beanstalk (Staging)..."
-#     - echo "📦 Uploading backend app to S3..."
-#     - aws s3 cp backend/backend-app.zip s3://${S3_BUCKET}/backend-app-staging-${CI_COMMIT_SHORT_SHA}.zip --region ${AWS_DEFAULT_REGION}
-#     - echo "✅ Backend app uploaded to s3://${S3_BUCKET}/backend-app-staging-${CI_COMMIT_SHORT_SHA}.zip"
-#     - echo "📋 Creating Elastic Beanstalk application version..."
-#     - aws elasticbeanstalk create-application-version --application-name ${EB_APPLICATION_NAME} --version-label staging-${CI_COMMIT_SHORT_SHA} --source-bundle S3Bucket=${S3_BUCKET},S3Key=backend-app-staging-${CI_COMMIT_SHORT_SHA}.zip --region ${AWS_DEFAULT_REGION}
-#     - echo "🔄 Updating Elastic Beanstalk environment (Staging)..."
-#     - aws elasticbeanstalk update-environment --application-name ${EB_APPLICATION_NAME} --environment-name ${EB_ENVIRONMENT_NAME_STAGING} --version-label staging-${CI_COMMIT_SHORT_SHA} --region ${AWS_DEFAULT_REGION}
-#     - echo "✅ Staging deployment initiated"
-#   environment:
-#     name: staging
-#     url: https://staging.your-domain.com
-#   only:
-#     - develop
-#   when: manual
+deploy_aws_staging:
+  <<: *deploy_template
+  stage: deploy
+  needs:
+    - job: backend_build
+    - job: frontend_build
+  before_script:
+    - apk add --no-cache aws-cli zip
+  script:
+    - echo "🚀 Deploying to AWS Elastic Beanstalk (Staging)..."
+    - echo "📦 Uploading backend app to S3..."
+    - aws s3 cp backend/backend-app.zip s3://${S3_BUCKET}/backend-app-staging-${CI_COMMIT_SHORT_SHA}.zip --region ${AWS_DEFAULT_REGION}
+    - echo "✅ Backend app uploaded to s3://${S3_BUCKET}/backend-app-staging-${CI_COMMIT_SHORT_SHA}.zip"
+    - echo "📋 Creating Elastic Beanstalk application version..."
+    - aws elasticbeanstalk create-application-version --application-name ${EB_APPLICATION_NAME} --version-label staging-${CI_COMMIT_SHORT_SHA} --source-bundle S3Bucket=${S3_BUCKET},S3Key=backend-app-staging-${CI_COMMIT_SHORT_SHA}.zip --region ${AWS_DEFAULT_REGION}
+    - echo "🔄 Updating Elastic Beanstalk environment (Staging)..."
+    - aws elasticbeanstalk update-environment --application-name ${EB_APPLICATION_NAME} --environment-name ${EB_ENVIRONMENT_NAME_STAGING} --version-label staging-${CI_COMMIT_SHORT_SHA} --region ${AWS_DEFAULT_REGION}
+    - echo "✅ Staging deployment initiated"
+  environment:
+    name: staging
+    url: https://staging.your-domain.com
+  only:
+    - develop
+  when: manual
