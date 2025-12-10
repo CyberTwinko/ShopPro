@@ -157,12 +157,15 @@ build_app:
   script:
     # Build frontend
     - cd frontend && npm run build && cd ..
-    
+
+    # Install zip
+    - apk add --no-cache zip
+
     # Prepare deploy folder
     - rm -rf backend/deploy
     - mkdir -p backend/deploy
     
-    # Copy backend files (without node_modules and without .env.example)
+    # Copy backend files (without node_modules and .env.example)
     - cp -r backend/controllers backend/models backend/routes backend/middleware backend/utils backend/config backend/server.js backend/package*.json backend/deploy/
     
     # Copy frontend build into backend deploy folder
@@ -174,7 +177,7 @@ build_app:
     # Move into deploy folder and zip contents (contents at root)
     - cd backend/deploy
     - zip -r ../backend-app.zip ./*
-    - cd ../..  
+    - cd ../..
     
   artifacts:
     paths:
