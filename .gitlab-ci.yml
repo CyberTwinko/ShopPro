@@ -272,7 +272,6 @@ deploy_aws_production:
   needs:
     - job: app_build
     - job: documentation_generate
-    - job: documentation_generate
   before_script:
     - apk add --no-cache aws-cli zip
   script:
