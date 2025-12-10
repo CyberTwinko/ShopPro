@@ -155,18 +155,27 @@ build_app:
     - lint_frontend
     - documentation_generate
   script:
-    - cd frontend && npm run build
-    - cd ..
-    - cd backend
-    - mkdir -p dist
-    - cp -r controllers models routes middleware utils config dist/ 2>/dev/null || echo "Some source files not found"
-    - cp server.js .env.example dist/ 2>/dev/null || true
-    - cp package.json package-lock.json dist/
-    - cp -r ../frontend/build dist/public
-    - cp -r ../docs dist/docs
-    - cd dist && npm ci --omit=dev --prefer-offline --no-audit && cd ..
-    - apk add --no-cache zip || true
-    - zip -r backend-app.zip dist/*
+    # Build frontend
+    - cd frontend && npm run build && cd ..
+    
+    # Prepare deploy folder
+    - rm -rf backend/deploy
+    - mkdir -p backend/deploy
+    
+    # Copy backend files (without node_modules)
+    - cp -r backend/controllers backend/models backend/routes backend/middleware backend/utils backend/config backend/server.js backend/.env.example backend/package*.json backend/deploy/
+    
+    # Copy frontend build into backend deploy folder
+    - cp -r frontend/build backend/deploy/public
+    
+    # Copy generated docs
+    - cp -r docs backend/deploy/docs
+    
+    # Move into deploy folder and zip contents (contents at root)
+    - cd backend/deploy
+    - zip -r ../backend-app.zip ./*
+    - cd ../..
+    
   artifacts:
     paths:
       - backend/backend-app.zip
