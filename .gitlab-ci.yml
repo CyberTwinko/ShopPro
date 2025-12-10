@@ -218,16 +218,26 @@ backend_build:
   needs:
     - job: lint_backend
     - job: test_backend_unit
+    - job: frontend_build
+    - job: documentation_generate
   script:
     - cd backend
     - mkdir -p dist
     - cp -r controllers models routes middleware utils config dist/ 2>/dev/null || echo "Some source files not found"
     - cp server.js .env.example dist/ 2>/dev/null || true
     - cp package.json package-lock.json dist/
+    # Copy frontend build into backend (to serve via Node)
+    - if [ -d "../frontend/build" ]; then cp -r ../frontend/build dist/public; else echo "No frontend build found"; fi
+    # Copy generated docs into dist so they are deployed with the backend
+    - if [ -d "../docs" ]; then cp -r ../docs dist/docs; else echo "No docs found"; fi
+    # Install production dependencies inside dist
     - cd dist && npm ci --omit=dev --prefer-offline --no-audit && cd ..
+    # Create a deployable zip for Elastic Beanstalk
+    - zip -r backend-app.zip dist/*
   artifacts:
     paths:
       - backend/dist/
+      - backend/backend-app.zip
     expire_in: 1 day
   only:
     - main

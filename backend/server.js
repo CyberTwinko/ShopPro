@@ -41,15 +41,27 @@ app.get('/api/config/paypal', (req, res) =>
 
 if (process.env.NODE_ENV === 'production') {
   const __dirname = path.resolve();
-  app.use('/uploads', express.static('/var/data/uploads'));
-  app.use(express.static(path.join(__dirname, '/frontend/build')));
+  // Serve uploads (adjust path if you store uploads elsewhere in production)
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+  // Serve frontend that was copied into `dist/public` during the build step
+  const publicPath = path.join(__dirname, 'public');
+  app.use(express.static(publicPath));
+
+  // Serve generated documentation if present in `dist/docs`
+  const docsPath = path.join(__dirname, 'docs');
+  app.use('/docs', express.static(docsPath));
 
   app.get('*', (req, res) =>
-    res.sendFile(path.resolve(__dirname, 'frontend', 'build', 'index.html'))
+    res.sendFile(path.resolve(publicPath, 'index.html'))
   );
 } else {
   const __dirname = path.resolve();
   app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
+  // In development serve frontend app (if running locally) and docs from repo root
+  app.use(express.static(path.join(__dirname, '../frontend/build')));
+  app.use('/docs', express.static(path.join(__dirname, '../docs')));
+
   app.get('/', (req, res) => {
     res.send('API is running....');
   });
