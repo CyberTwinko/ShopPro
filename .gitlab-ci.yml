@@ -127,7 +127,8 @@ test_backend:
     - job: install_dependencies
   script:
     - cd backend
-    - npm run test 
+    - npm ci --prefer-offline --no-audit
+    - npm run test
   artifacts:
     when: always
     paths:
@@ -136,7 +137,6 @@ test_backend:
       coverage_report:
         coverage_format: cobertura
         path: backend/coverage/cobertura-coverage.xml
-      junit: backend/junit.xml
     expire_in: 30 days
   allow_failure: true
   only:
