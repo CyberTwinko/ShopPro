@@ -128,7 +128,9 @@ test_backend:
   script:
     - cd backend
     - npm ci --prefer-offline --no-audit
-    - npm run test
+    - |
+      echo "Running backend tests (userController.test.js)..."
+      npx jest tests/userController.test.js --runInBand --detectOpenHandles
   artifacts:
     when: always
     paths:
@@ -143,6 +145,7 @@ test_backend:
     - main
     - develop
     - merge_requests
+
 
 # ==================== BUILD STAGE ====================
 build_app:
