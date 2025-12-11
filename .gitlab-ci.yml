@@ -148,7 +148,7 @@ test_backend:
 # ==================== BUILD STAGE ====================
 build_app:
   stage: build
-  image: node:22-alpine
+  image: node:22
   needs:
     - lint_backend
     - test_backend
@@ -158,27 +158,24 @@ build_app:
     # Build frontend
     - cd frontend && npm run build && cd ..
 
-    # Install zip
-    - apk add --no-cache zip
-
     # Prepare deploy folder
     - rm -rf backend/deploy
     - mkdir -p backend/deploy
-    
-    # Copy backend files (without node_modules and .env.example)
+
+    # Copy backend files (without node_modules and without .env.example)
     - cp -r backend/controllers backend/models backend/routes backend/middleware backend/utils backend/config backend/server.js backend/package*.json backend/deploy/
-    
+
     # Copy frontend build into backend deploy folder
     - cp -r frontend/build backend/deploy/public
-    
+
     # Copy generated docs
     - cp -r docs backend/deploy/docs
-    
+
     # Move into deploy folder and zip contents (contents at root)
     - cd backend/deploy
     - zip -r ../backend-app.zip ./*
     - cd ../..
-    
+
   artifacts:
     paths:
       - backend/backend-app.zip
