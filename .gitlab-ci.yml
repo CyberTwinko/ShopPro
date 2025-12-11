@@ -128,23 +128,14 @@ test_backend:
   script:
     - cd backend
     - npm ci --prefer-offline --no-audit
-    - |
-      echo "Running backend tests (userController.test.js)..."
-      npx jest tests/userController.test.js --runInBand --detectOpenHandles
+    - echo "Running backend tests (userController.test.js)..."
+    - npm run test -- tests/userController.test.js
   artifacts:
     when: always
     paths:
       - backend/coverage/
-    reports:
-      coverage_report:
-        coverage_format: cobertura
-        path: backend/coverage/cobertura-coverage.xml
-    expire_in: 30 days
-  allow_failure: true
-  only:
-    - main
-    - develop
-    - merge_requests
+  allow_failure: false
+
 
 
 # ==================== BUILD STAGE ====================
