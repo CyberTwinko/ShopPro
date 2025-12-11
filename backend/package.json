@@ -39,6 +39,8 @@
       "/node_modules/",
       "jest.config.js"
     ],
-    "reporters": ["default"]
+    "reporters": [
+      "default"
+    ]
   }
 }

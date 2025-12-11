@@ -124,7 +124,7 @@ test_backend:
   stage: test
   image: node:22-alpine
   needs:
-    - job: install_dependencies
+    - install_dependencies
   script:
     - cd backend
     - npm ci --prefer-offline --no-audit
@@ -134,9 +134,12 @@ test_backend:
     when: always
     paths:
       - backend/coverage/
+    expire_in: 30 days
   allow_failure: false
-
-
+  only:
+    - main
+    - develop
+    - merge_requests
 
 # ==================== BUILD STAGE ====================
 build_app:
