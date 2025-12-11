@@ -125,15 +125,14 @@ test_backend:
   image: node:22-alpine
   needs:
     - job: install_dependencies
-      artifacts: true
   script:
     - cd backend
+    - npm ci --prefer-offline --no-audit
     - npm run test -- --coverage
   artifacts:
     when: always
     paths:
       - backend/coverage/
-      - backend/junit.xml
     reports:
       coverage_report:
         coverage_format: cobertura
