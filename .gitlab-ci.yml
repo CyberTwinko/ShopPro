@@ -124,7 +124,8 @@ test_backend:
   stage: test
   image: node:22-alpine
   needs:
-    - install_dependencies
+    - job: install_dependencies
+      artifacts: true
   script:
     - cd backend
     - npm run test -- --coverage
