@@ -158,11 +158,14 @@ build_app:
     # Build frontend
     - cd frontend && npm run build && cd ..
 
+    # Install zip (Debian/Ubuntu)
+    - apt-get update && apt-get install -y zip
+
     # Prepare deploy folder
     - rm -rf backend/deploy
     - mkdir -p backend/deploy
 
-    # Copy backend files (without node_modules and without .env.example)
+    # Copy backend files (without node_modules and .env.example)
     - cp -r backend/controllers backend/models backend/routes backend/middleware backend/utils backend/config backend/server.js backend/package*.json backend/deploy/
 
     # Copy frontend build into backend deploy folder
@@ -171,7 +174,7 @@ build_app:
     # Copy generated docs
     - cp -r docs backend/deploy/docs
 
-    # Move into deploy folder and zip contents (contents at root)
+    # Zip deploy folder contents at root
     - cd backend/deploy
     - zip -r ../backend-app.zip ./*
     - cd ../..
