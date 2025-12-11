@@ -127,8 +127,7 @@ test_backend:
     - job: install_dependencies
   script:
     - cd backend
-    - npm ci --prefer-offline --no-audit
-    - npm run test -- --coverage
+    - npm run test 
   artifacts:
     when: always
     paths:
